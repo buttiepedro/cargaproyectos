@@ -1,0 +1,72 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Feedback</title>
+</head>
+<body>
+  <h2>Enviar Feedback</h2>
+
+  <label>Tipo:</label>
+  <select id="tipo">
+    <option value="Error">Error</option>
+    <option value="Mejora">Mejora</option>
+  </select><br><br>
+
+  <label>App:</label>
+  <select id="project"></select><br><br>
+
+  <label>Titulo:</label>
+  <input id="title"/><br><br>
+
+  <label>Descripcion:</label>
+  <textarea id="desc"></textarea><br><br>
+
+  <label>Imagenes:</label>
+  <input type="file" id="files" multiple/><br><br>
+
+  <button onclick="send()">Enviar</button>
+
+  <script>
+    const API_KEY = "mi_api_key_segura";
+
+    async function loadProjects() {
+      const res = await fetch('/projects', {
+        headers: { 'x-api-key': API_KEY }
+      });
+      const data = await res.json();
+
+      const select = document.getElementById('project');
+      data.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.text = p.name;
+        select.appendChild(opt);
+      });
+    }
+
+    async function send() {
+      const formData = new FormData();
+      formData.append("tipo", document.getElementById('tipo').value);
+      formData.append("project_id", document.getElementById('project').value);
+      formData.append("title", document.getElementById('title').value);
+      formData.append("description", document.getElementById('desc').value);
+
+      const files = document.getElementById('files').files;
+      for (let i = 0; i < files.length; i++) {
+        formData.append("files", files[i]);
+      }
+
+      await fetch('/task', {
+        method: 'POST',
+        headers: { 'x-api-key': API_KEY },
+        body: formData
+      });
+
+      alert('Enviado!');
+    }
+
+    loadProjects();
+  </script>
+</body>
+</html>
