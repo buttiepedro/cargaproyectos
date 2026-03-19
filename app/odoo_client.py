@@ -23,12 +23,20 @@ def create_task(data, images=None):
     if images is None:
         images = []
 
-    # 🎯 FORMATO FINAL DEL TÍTULO
-    title = f"{data['tipo'].capitalize()} - {data['title'].strip()}"
+    tipo = data['tipo'].capitalize()
 
-    # 💡 descripción enriquecida
+    # 🎯 título
+    title = f"{tipo} - {data['title'].strip()}"
+
+    # 🧠 buscar tag en Odoo
+    tag_ids = models.execute_kw(db, uid, password,
+        'project.tags', 'search',
+        [[('name', '=', tipo)]]
+    )
+
+    # 💡 descripción
     description = f"""
-    <b>Tipo:</b> {data['tipo']}<br><br>
+    <b>Tipo:</b> {tipo}<br><br>
     {data['description']}
     """
 
@@ -37,11 +45,12 @@ def create_task(data, images=None):
         [{
             'name': title,
             'project_id': int(data['project_id']),
-            'description': description
+            'description': description,
+            'tag_ids': [(6, 0, tag_ids)] if tag_ids else []
         }]
     )
 
-    # 📎 upload de imágenes
+    # 📎 imágenes
     for img in images:
         models.execute_kw(db, uid, password,
             'ir.attachment', 'create',
