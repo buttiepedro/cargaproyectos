@@ -1,60 +1,150 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Feedback</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-  <h2>Enviar Feedback</h2>
+<body class="bg-gray-100 dark:bg-gray-900 flex items-center justify-center min-h-screen transition">
 
-  <label>Tipo:</label>
-  <select id="tipo">
-    <option value="Error">Error</option>
-    <option value="Mejora">Mejora</option>
-  </select><br><br>
+  <div class="bg-white dark:bg-gray-800 shadow-2xl rounded-2xl p-8 w-full max-w-xl">
+    <h2 class="text-2xl font-bold mb-6 text-gray-800 dark:text-white">💬 Feedback</h2>
 
-  <label>App:</label>
-  <select id="project"></select><br><br>
+    <div class="space-y-4">
 
-  <label>Titulo:</label>
-  <input id="title"/><br><br>
+      <!-- Tipo botones -->
+      <div>
+        <label class="block text-sm font-medium mb-1">Tipo</label>
+        <div class="flex gap-2">
+          <button onclick="setTipo('Error')" id="btnError" class="flex-1 p-2 rounded-lg border">🐞 Error</button>
+          <button onclick="setTipo('Mejora')" id="btnMejora" class="flex-1 p-2 rounded-lg border">🚀 Mejora</button>
+        </div>
+      </div>
 
-  <label>Descripcion:</label>
-  <textarea id="desc"></textarea><br><br>
+      <!-- Proyecto -->
+      <div>
+        <label class="block text-sm font-medium">App</label>
+        <select id="project" class="w-full mt-1 p-2 border rounded-lg"></select>
+      </div>
 
-  <label>Imagenes:</label>
-  <input type="file" id="files" multiple/><br><br>
+      <!-- Titulo -->
+      <div>
+        <label class="block text-sm font-medium">Título</label>
+        <input id="title" placeholder="Ej: No carga ventas" class="w-full mt-1 p-2 border rounded-lg"/>
+      </div>
 
-  <button onclick="send()">Enviar</button>
+      <!-- Descripcion -->
+      <div>
+        <label class="block text-sm font-medium">Descripción</label>
+        <textarea id="desc" placeholder="Explicá el problema o mejora..." class="w-full mt-1 p-2 border rounded-lg h-28"></textarea>
+      </div>
+
+      <!-- Drag & Drop -->
+      <div>
+        <label class="block text-sm font-medium">Imágenes</label>
+        <div id="dropzone" class="mt-1 p-4 border-2 border-dashed rounded-lg text-center cursor-pointer">
+          Arrastrá imágenes o hacé click
+          <input type="file" id="files" multiple class="hidden" />
+        </div>
+        <div id="preview" class="flex gap-2 mt-2 flex-wrap"></div>
+      </div>
+
+      <!-- Boton -->
+      <button onclick="send()" id="btn"
+        class="w-full bg-blue-600 text-white p-3 rounded-xl hover:bg-blue-700 transition">
+        Enviar
+      </button>
+
+      <div id="status" class="text-center text-sm mt-2"></div>
+
+    </div>
+  </div>
 
   <script>
+    let tipo = 'Error';
+
+    function setTipo(t) {
+      tipo = t;
+      document.getElementById('btnError').classList.remove('bg-red-500','text-white');
+      document.getElementById('btnMejora').classList.remove('bg-green-500','text-white');
+
+      if (t === 'Error') {
+        document.getElementById('btnError').classList.add('bg-red-500','text-white');
+      } else {
+        document.getElementById('btnMejora').classList.add('bg-green-500','text-white');
+      }
+    }
+
     async function loadProjects() {
-      try {
-        const res = await fetch('/projects');
-        const data = await res.json();
+      const res = await fetch('/projects');
+      const data = await res.json();
 
-        const select = document.getElementById('project');
+      const select = document.getElementById('project');
 
-        data.forEach(p => {
-          const opt = document.createElement('option');
-          opt.value = p.id;
-          opt.text = p.name;
-          select.appendChild(opt);
-        });
-      } catch (err) {
-        alert('Error cargando proyectos');
-        console.error(err);
+      data.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.text = p.name;
+
+        if (p.name.toLowerCase() === 'general') {
+          opt.selected = true;
+        }
+
+        select.appendChild(opt);
+      });
+    }
+
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('files');
+    const preview = document.getElementById('preview');
+
+    dropzone.addEventListener('click', () => fileInput.click());
+
+    dropzone.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropzone.classList.add('bg-gray-200');
+    });
+
+    dropzone.addEventListener('dragleave', () => {
+      dropzone.classList.remove('bg-gray-200');
+    });
+
+    dropzone.addEventListener('drop', e => {
+      e.preventDefault();
+      fileInput.files = e.dataTransfer.files;
+      showPreview();
+    });
+
+    fileInput.addEventListener('change', showPreview);
+
+    function showPreview() {
+      preview.innerHTML = '';
+      const files = fileInput.files;
+
+      for (let i = 0; i < files.length; i++) {
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(files[i]);
+        img.className = 'w-16 h-16 object-cover rounded';
+        preview.appendChild(img);
       }
     }
 
     async function send() {
+      const btn = document.getElementById('btn');
+      const status = document.getElementById('status');
+
       try {
+        btn.disabled = true;
+        btn.innerText = 'Enviando...';
+
         const formData = new FormData();
-        formData.append("tipo", document.getElementById('tipo').value);
+        formData.append("tipo", tipo);
         formData.append("project_id", document.getElementById('project').value);
         formData.append("title", document.getElementById('title').value);
         formData.append("description", document.getElementById('desc').value);
 
-        const files = document.getElementById('files').files;
+        const files = fileInput.files;
         for (let i = 0; i < files.length; i++) {
           formData.append("files", files[i]);
         }
@@ -64,24 +154,26 @@
           body: formData
         });
 
-        if (!res.ok) {
-          throw new Error('Error al enviar');
-        }
+        if (!res.ok) throw new Error();
 
-        alert('✅ Enviado correctamente');
+        status.innerText = '✅ Enviado correctamente';
 
-        // limpiar form
         document.getElementById('title').value = '';
         document.getElementById('desc').value = '';
-        document.getElementById('files').value = '';
+        fileInput.value = '';
+        preview.innerHTML = '';
 
       } catch (err) {
-        alert('❌ Error al enviar');
-        console.error(err);
+        status.innerText = '❌ Error al enviar';
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Enviar';
       }
     }
 
+    setTipo('Error');
     loadProjects();
   </script>
+
 </body>
 </html>
