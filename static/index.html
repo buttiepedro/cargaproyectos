@@ -9,11 +9,22 @@
 <body class="bg-gray-100 dark:bg-gray-900 flex items-center justify-center min-h-screen transition">
 
   <div class="bg-white dark:bg-gray-800 shadow-2xl rounded-2xl p-8 w-full max-w-xl">
-    <h2 class="text-2xl font-bold mb-6 text-gray-800 dark:text-white">💬 Feedback</h2>
 
-    <div class="space-y-4">
+    <!-- Tabs -->
+    <div class="flex gap-2 mb-6 border-b">
+      <button onclick="showTab('form')" id="tabForm"
+        class="pb-2 px-1 text-sm font-semibold border-b-2 border-blue-600 text-blue-600">
+        Nuevo ticket
+      </button>
+      <button onclick="showTab('status')" id="tabStatus"
+        class="pb-2 px-1 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+        Mis tickets
+      </button>
+    </div>
 
-      <!-- Tipo botones -->
+    <!-- ===== TAB: NUEVO TICKET ===== -->
+    <div id="panelForm" class="space-y-4">
+
       <div>
         <label class="block text-sm font-medium mb-1">Tipo</label>
         <div class="flex gap-2">
@@ -22,35 +33,35 @@
         </div>
       </div>
 
-      <!-- Proyecto -->
       <div>
         <label class="block text-sm font-medium">App</label>
         <select id="project" class="w-full mt-1 p-2 border rounded-lg"></select>
       </div>
 
-      <!-- Titulo -->
       <div>
         <label class="block text-sm font-medium">Título</label>
         <input id="title" placeholder="Ej: No carga ventas" class="w-full mt-1 p-2 border rounded-lg"/>
       </div>
 
-      <!-- Descripcion -->
       <div>
         <label class="block text-sm font-medium">Descripción</label>
         <textarea id="desc" placeholder="Explicá el problema o mejora..." class="w-full mt-1 p-2 border rounded-lg h-28"></textarea>
       </div>
 
-      <!-- Drag & Drop -->
+      <div>
+        <label class="block text-sm font-medium">Tu email</label>
+        <input id="email" type="email" placeholder="nombre@empresa.com" class="w-full mt-1 p-2 border rounded-lg"/>
+      </div>
+
       <div>
         <label class="block text-sm font-medium">Imágenes</label>
-        <div id="dropzone" class="mt-1 p-4 border-2 border-dashed rounded-lg text-center cursor-pointer">
+        <div id="dropzone" class="mt-1 p-4 border-2 border-dashed rounded-lg text-center cursor-pointer text-sm text-gray-500">
           Arrastrá imágenes o hacé click
           <input type="file" id="files" multiple class="hidden" />
         </div>
         <div id="preview" class="flex gap-2 mt-2 flex-wrap"></div>
       </div>
 
-      <!-- Boton -->
       <button onclick="send()" id="btn"
         class="w-full bg-blue-600 text-white p-3 rounded-xl hover:bg-blue-700 transition">
         Enviar
@@ -59,111 +70,118 @@
       <div id="status" class="text-center text-sm mt-2"></div>
 
     </div>
+
+    <!-- ===== TAB: MIS TICKETS ===== -->
+    <div id="panelStatus" class="hidden space-y-4">
+
+      <div class="flex gap-2">
+        <input id="queryEmail" type="email" placeholder="Tu email" class="flex-1 p-2 border rounded-lg text-sm"/>
+        <button onclick="loadTickets()" id="btnQuery"
+          class="bg-blue-600 text-white px-4 rounded-xl hover:bg-blue-700 transition text-sm">
+          Buscar
+        </button>
+      </div>
+
+      <div id="ticketList" class="space-y-3"></div>
+
+    </div>
+
   </div>
 
   <script>
     let tipo = 'Error';
 
-    function setTipo(t) {
-      tipo = t;
-      document.getElementById('btnError').classList.remove('bg-red-500','text-white');
-      document.getElementById('btnMejora').classList.remove('bg-green-500','text-white');
+    // ── Tabs ──────────────────────────────────────────────
+    function showTab(tab) {
+      const isForm = tab === 'form';
+      document.getElementById('panelForm').classList.toggle('hidden', !isForm);
+      document.getElementById('panelStatus').classList.toggle('hidden', isForm);
 
-      if (t === 'Error') {
-        document.getElementById('btnError').classList.add('bg-red-500','text-white');
-      } else {
-        document.getElementById('btnMejora').classList.add('bg-green-500','text-white');
-      }
+      document.getElementById('tabForm').className = isForm
+        ? 'pb-2 px-1 text-sm font-semibold border-b-2 border-blue-600 text-blue-600'
+        : 'pb-2 px-1 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-gray-700';
+
+      document.getElementById('tabStatus').className = !isForm
+        ? 'pb-2 px-1 text-sm font-semibold border-b-2 border-blue-600 text-blue-600'
+        : 'pb-2 px-1 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-gray-700';
     }
 
+    // ── Tipo ──────────────────────────────────────────────
+    function setTipo(t) {
+      tipo = t;
+      document.getElementById('btnError').className = 'flex-1 p-2 rounded-lg border' + (t === 'Error' ? ' bg-red-500 text-white' : '');
+      document.getElementById('btnMejora').className = 'flex-1 p-2 rounded-lg border' + (t === 'Mejora' ? ' bg-green-500 text-white' : '');
+    }
+
+    // ── Proyectos ─────────────────────────────────────────
     async function loadProjects() {
       const res = await fetch('/projects');
       const data = await res.json();
-
       const select = document.getElementById('project');
-
       data.forEach(p => {
         const opt = document.createElement('option');
         opt.value = p.id;
         opt.text = p.name;
-
-        if (p.name.toLowerCase() === 'general') {
-          opt.selected = true;
-        }
-
+        if (p.name.toLowerCase() === 'general') opt.selected = true;
         select.appendChild(opt);
       });
     }
 
+    // ── Drag & drop ───────────────────────────────────────
     const dropzone = document.getElementById('dropzone');
     const fileInput = document.getElementById('files');
-    const preview = document.getElementById('preview');
+    const preview   = document.getElementById('preview');
 
     dropzone.addEventListener('click', () => fileInput.click());
-
-    dropzone.addEventListener('dragover', e => {
-      e.preventDefault();
-      dropzone.classList.add('bg-gray-200');
-    });
-
-    dropzone.addEventListener('dragleave', () => {
-      dropzone.classList.remove('bg-gray-200');
-    });
-
-    dropzone.addEventListener('drop', e => {
-      e.preventDefault();
-      fileInput.files = e.dataTransfer.files;
-      showPreview();
-    });
-
+    dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('bg-gray-200'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('bg-gray-200'));
+    dropzone.addEventListener('drop', e => { e.preventDefault(); fileInput.files = e.dataTransfer.files; showPreview(); });
     fileInput.addEventListener('change', showPreview);
 
     function showPreview() {
       preview.innerHTML = '';
-      const files = fileInput.files;
-
-      for (let i = 0; i < files.length; i++) {
+      Array.from(fileInput.files).forEach(f => {
         const img = document.createElement('img');
-        img.src = URL.createObjectURL(files[i]);
+        img.src = URL.createObjectURL(f);
         img.className = 'w-16 h-16 object-cover rounded';
         preview.appendChild(img);
-      }
+      });
     }
 
+    // ── Enviar ticket ─────────────────────────────────────
     async function send() {
-      const btn = document.getElementById('btn');
+      const btn    = document.getElementById('btn');
       const status = document.getElementById('status');
+      const email  = document.getElementById('email').value.trim();
+
+      if (!email) {
+        status.innerText = '⚠️ Ingresá tu email para poder rastrear el ticket';
+        return;
+      }
 
       try {
         btn.disabled = true;
         btn.innerText = 'Enviando...';
 
         const formData = new FormData();
-        formData.append("tipo", tipo);
-        formData.append("project_id", document.getElementById('project').value);
-        formData.append("title", document.getElementById('title').value);
-        formData.append("description", document.getElementById('desc').value);
+        formData.append('tipo',       tipo);
+        formData.append('project_id', document.getElementById('project').value);
+        formData.append('title',      document.getElementById('title').value);
+        formData.append('description',document.getElementById('desc').value);
+        formData.append('email',      email);
 
-        const files = fileInput.files;
-        for (let i = 0; i < files.length; i++) {
-          formData.append("files", files[i]);
-        }
+        Array.from(fileInput.files).forEach(f => formData.append('files', f));
 
-        const res = await fetch('/task', {
-          method: 'POST',
-          body: formData
-        });
-
+        const res = await fetch('/task', { method: 'POST', body: formData });
         if (!res.ok) throw new Error();
 
-        status.innerText = '✅ Enviado correctamente';
-
+        status.innerHTML = '✅ Enviado. Podés ver el estado en <b>Mis tickets</b> con tu email.';
         document.getElementById('title').value = '';
-        document.getElementById('desc').value = '';
-        fileInput.value = '';
+        document.getElementById('desc').value  = '';
+        fileInput.value  = '';
         preview.innerHTML = '';
 
-      } catch (err) {
+      } catch {
         status.innerText = '❌ Error al enviar';
       } finally {
         btn.disabled = false;
@@ -171,6 +189,69 @@
       }
     }
 
+    // ── Consultar tickets ─────────────────────────────────
+    const STAGE_COLORS = {
+      'En progreso': 'bg-blue-100 text-blue-700',
+      'Nuevo':       'bg-gray-100 text-gray-700',
+      'Hecho':       'bg-green-100 text-green-700',
+      'Cancelado':   'bg-red-100 text-red-700',
+    };
+
+    function stageBadge(stage) {
+      const cls = STAGE_COLORS[stage] || 'bg-yellow-100 text-yellow-700';
+      return `<span class="text-xs font-medium px-2 py-0.5 rounded-full ${cls}">${stage}</span>`;
+    }
+
+    async function loadTickets() {
+      const email = document.getElementById('queryEmail').value.trim();
+      if (!email) return;
+
+      const btn  = document.getElementById('btnQuery');
+      const list = document.getElementById('ticketList');
+
+      btn.disabled  = true;
+      btn.innerText = '...';
+      list.innerHTML = '<p class="text-sm text-gray-400">Buscando...</p>';
+
+      try {
+        const res  = await fetch(`/tickets?email=${encodeURIComponent(email)}`);
+        const data = await res.json();
+
+        if (!data.length) {
+          list.innerHTML = '<p class="text-sm text-gray-500">No se encontraron tickets para ese email.</p>';
+          return;
+        }
+
+        list.innerHTML = data.map(t => `
+          <div class="border rounded-xl p-4 space-y-2">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <span class="font-medium text-sm text-gray-800 dark:text-white">${t.name}</span>
+              ${stageBadge(t.stage)}
+            </div>
+            ${t.messages.length ? `
+              <div class="space-y-1 pt-1 border-t mt-2">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Notas</p>
+                ${t.messages.map(m => `
+                  <div class="text-xs text-gray-600 dark:text-gray-300">
+                    <span class="font-medium">${m.author}</span>
+                    <span class="text-gray-400 ml-1">${new Date(m.date).toLocaleDateString('es-AR')}</span>
+                    <div class="mt-0.5 leading-relaxed">${m.body}</div>
+                  </div>
+                `).join('<hr class="my-1">')}
+              </div>
+            ` : '<p class="text-xs text-gray-400">Sin notas aún.</p>'}
+          </div>
+        `).join('');
+
+      } catch {
+        list.innerHTML = '<p class="text-sm text-red-500">Error al consultar tickets.</p>';
+      } finally {
+        btn.disabled  = false;
+        btn.innerText = 'Buscar';
+      }
+    }
+
+    // ── Init ──────────────────────────────────────────────
     setTipo('Error');
     loadProjects();
   </script>

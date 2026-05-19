@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 import base64
 
-from app.odoo_client import get_projects, create_task
+from app.odoo_client import get_projects, create_task, get_tasks_by_email
 
 load_dotenv()
 
@@ -12,7 +12,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # después podés restringir a tu dominio
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -27,6 +27,7 @@ async def task(
     project_id: int = Form(...),
     title: str = Form(...),
     description: str = Form(...),
+    email: str = Form(...),
     files: list[UploadFile] = File([])
 ):
     images = []
@@ -42,10 +43,15 @@ async def task(
         "tipo": tipo,
         "project_id": project_id,
         "title": title,
-        "description": description
+        "description": description,
+        "email": email
     }, images)
 
     return {"task_id": task_id}
+
+@app.get("/tickets")
+def tickets(email: str):
+    return get_tasks_by_email(email)
 
 # servir frontend
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
